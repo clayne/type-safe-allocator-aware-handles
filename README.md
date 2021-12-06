@@ -1,31 +1,41 @@
 # C++ Type Safe Allocator Aware Handles 
 
-There is a design which is as old as time which is to use handles instead of pointers to access memory (roughly speaking).
-However, that's not fancy and thus people either don't like it or complain about it not being fancy enough. It's not type safe! 
-What if I assign one integer handle to another but they refer to different types? The horror!
+There is a design which is as old as time. Using handles instead of pointers to access memory (roughly speaking).
+However, that is not fancy and people complain that it is not fancy enough! This is the fancy solution.
+
+## Design Goals.
+
+#### Type safety 
+
+It's not type safe! What if I assign one integer handle to another but they refer to different types? The horror!
 What if I assign one handle to another and they are the same type but they use a different allocator? Even more horror!
 
-So first and foremost this tackles that issue. Type safe, allocator aware handles that you don't accidentally assign to the wrong thing, that also have zero-overhead (LOL) and 
-minimise memory safety problems issues (although not entirely obviously)
+First and foremost this repo aims to tackle these issues. It provides a type safe, allocator aware handle class that makes it so you don't accidentally assign handles incorrectly. It has zero-overhead (LOL within reason) and minimises memory safety problems (although not entirely obviously)
 
-In practice i'd probably just stick with `int handle = 10`, but this way has more angle brackets so must be better right?
+(In practice, I'd probably stick with `int handle = 10`, but that doesn't have enough angle brackets)
 
-The other issue is smart pointer abuse. Smart pointers are BAD and encourage
+#### Smart Pointer Abuse 
+
+The other issue this is designed to address is smart pointer abuse. Smart pointers have ruled the industry for far to long and are just BAD! They encourage
 bad design and sloppy code. Pointers should not be responsible for the memory they point to. Allocators should be responsible for that. But people didn't want to write allocators
-and so they made their life way harder with smart pointers. Cyclic references, fragmented memory, confusing semantics and life times, all of that comes with smart pointers. And on 
-top of that they are really slow. C++ with std::shared_ptr is bad, bad, bad!
+and so we have smart pointers.
 
-This repo doesn't solve all the problems that smart pointers solve. It's just a different way to handle memory and a different way of thinking of things. 
+Cyclic references, fragmented memory, confusing semantics, hidden life times, thread contention. These are all issues with smart pointers. However, their biggest sin is that they proliferate mystical thinking about memory and "raw" pointers. This has caused untold damage industry wide. While using smart pointers is easy in the short term it will cost the business in the long term as the mess needs to be untangled and the performance left by the wayside is irretrievable. C++ with std::shared_ptr (java) is bad, bad, bad!
+
+This repo doesn't solve all the problems that smart pointers solve, and doesn't intend to. It presents a different way to handle memory, (which tends to be better for most problems) in the hopes that our industry moves away from smart pointer tyranny. Stop using smart pointers so much!
+
 It moves responsibilities away from smart pointers and places them with the allocators (where 
-they should have been from the start). Allocators give you a type safe handle and with that you can access the data to your hearts content.
+they should have been from the start). Allocators give you a type safe handle and with that you can access the data to your hearts content along with customising the allocator as you go for your specific problem.
+
+#### Trade offs
 
 The big problem with handles is "zombie references". Handles that have a stale value. There are strategies to mitigate this, but it does mean that eventually the program will not be 
 able to allocate any more handles (this could be by the time the universe ends though).
 
 So with handles, dead references should be minimised as much as possible by your design. You get a similar problem with smart pointers where forgotten smart pointer will 
-keep an object alive when it shouldn't. The only way to properly solve this is to make a custom allocator that does a sweep and clear
+keep an object alive when it shouldn't. The only way to properly solve this is to make a custom allocator that does a sweep and clear. But that is good because handles make you think about what you should have been thinking at the start. About your data, about your memory and about how you will allocate that data through your program.
 
-## Example 
+## Examples
 
 Handles are templated and require you to specify the type they point to and the type of the allocator the data belongs to at compile time (hence type safety). In order to use 
 the handles, the allocator class must have implemented the `T* handle_deref(nstd::handle<T, F> &handle)` function (where T is the type of data and F is the type of the allocator (the class this function should belong to))
