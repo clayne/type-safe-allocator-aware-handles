@@ -50,4 +50,6 @@ int main() {
         // at this point
         *ptr.c = "Hello there"; 
     });
+
+    delete HandleMyData::allocator;
 }
