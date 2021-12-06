@@ -28,16 +28,53 @@ keep an object alive when it shouldn't. The only way to properly solve this is t
 ## Example 
 
 Handles are templated and require you to specify the type they point to and the type of the allocator the data belongs to. In order to use 
-the handles, the allocator class must have implemented the T* handle_deref(nstd::handle<T, F> &handle) function (where T is the type of the data and F is the type of the allocator (the class this function should belong to))
+the handles, the allocator class must have implemented the `T* handle_deref(nstd::handle<T, F> &handle)` function (where T is the type of the data and F is the type of the allocator (the class this function should belong to))
 
 The handle deref function is exactly what it describes. It dererferences the handle. It returns the pointer the handle refers to. It's up to you how you implement this, but not that all handles are fundamental types, they are simple integral types in some way or another and can't be anything else.
 
 You must also assign the static allocator pointer for you specific handle type. 
 
-Lets say you have a handle to you type 'struct MyData'. The handle for this could be nstd::handle<MyData, MyDataAllocator>'. Where 'MyDataAllocator' is your custom allocator type.
-You must then set the static allocator pointer for this handle to a 'MyDataAllocator' object.
+Lets say you have a handle to you type `struct MyData`. The handle for this could be `nstd::handle<MyData, MyDataAllocator>`. Where `MyDataAllocator` is your custom allocator type.
+You must then set the static allocator pointer for this handle to a `MyDataAllocator` object.
 
-'nstd::handle<MyData, MyDataAllocator>::allocator = new MyDataAllocator()'.
+```cpp
+  struct MyData { int a; };
+  struct MyDataAllocator { 
+  
+    MyData data;
+    bool is_allocated = false;
+  
+    nstd::handle<MyData, MyDataAllocator> allocate() { 
+        if (is_allocated) return 0; // if its allocated return 0, 0 being an invalid handle
+        is_allocated = true;
+        return 1;
+    }
+    
+    MyData* handle_deref(nstd::handle<MyData, MyDataAllocator> &handle) { 
+      if (handle.id != 1) return nullptr;
+      if (is_allocated == false) return nullptr;
+      return &data;
+    }
+  };
+
+  int main() {
+  
+    // allocate the allocator for this type.
+    nstd::handle<MyData, MyDataAllocator>::allocator = new MyDataAllocator()
+    
+    // allocate a value and get the handle 
+    nstd::handle<MyData, MyDataAllocator> handle = nstd::handle<MyData, MyDataAllocator>::allocator->allocate();
+    
+    // get the pointer
+    MyData *ptr = handle.val();
+    
+    // get the ref 
+    MyData &val = handle.ref();
+    
+    // do checked execution 
+     handle.checked_execution([](MyData *ptr) { ptr->a = 0; });
+  }
+```
 
 
 
