@@ -27,19 +27,19 @@ keep an object alive when it shouldn't. The only way to properly solve this is t
 
 ## Example 
 
-Handles are templated and require you to specify the type they point to and the type of the allocator the data belongs to. In order to use 
-the handles, the allocator class must have implemented the `T* handle_deref(nstd::handle<T, F> &handle)` function (where T is the type of the data and F is the type of the allocator (the class this function should belong to))
+Handles are templated and require you to specify the type they point to and the type of the allocator the data belongs to at compile time (hence type safety). In order to use 
+the handles, the allocator class must have implemented the `T* handle_deref(nstd::handle<T, F> &handle)` function (where T is the type of data and F is the type of the allocator (the class this function should belong to))
 
-The handle deref function is exactly what it describes. It dererferences the handle. It returns the pointer the handle refers to. It's up to you how you implement this, but not that all handles are fundamental types, they are simple integral types in some way or another and can't be anything else.
+The handle deref function is exactly what it says on the tin. It dereferences the handle. It returns the pointer to the data the handle refers to. It's up to you how you implement this, you can even alter the handle since its passed by reference (this is good for invalidating a handle). Note, all handles are fundamental types, they are simple integral types in some way or another and can't be anything else although you can specifiy what kind of integer you want (unsigned, signed etc)
 
-You must also assign the static allocator pointer for you specific handle type. 
+Before you can use an allocator you must assign the static allocator pointer for the handle.
 
-Lets say you have a handle to you type `struct MyData`. The handle for this could be `nstd::handle<MyData, MyDataAllocator>`. Where `MyDataAllocator` is your custom allocator type.
-You must then set the static allocator pointer for this handle to a `MyDataAllocator` object.
+For instance, let's say you have a handle to a type `struct MyData`. The handle for this could be `nstd::handle<MyData, MyDataAllocator>`. Where `MyDataAllocator` is your custom allocator type.
+You must then set the static allocator pointer for this handle to a valid `MyDataAllocator` object. See below
 
 ```cpp
   struct MyData { int a; };
-  struct MyDataAllocator { 
+  struct MyDataAllocator { // my custom allocator. note that handle_deref() is implemented
   
     MyData data;
     bool is_allocated = false;
@@ -59,23 +59,27 @@ You must then set the static allocator pointer for this handle to a `MyDataAlloc
 
   int main() {
   
-    // allocate the allocator for this type.
+    // allocate the allocator for this type. for all handles of this type, this is their allocator.
     nstd::handle<MyData, MyDataAllocator>::allocator = new MyDataAllocator()
-    
+  }
+```
+We can get the value a handle refers to in 3 ways. 
+
+```
     // allocate a value and get the handle 
     nstd::handle<MyData, MyDataAllocator> handle = nstd::handle<MyData, MyDataAllocator>::allocator->allocate();
     
-    // get the pointer
+    // get the pointer. will return nullptr if this is an invalid handle
     MyData *ptr = handle.val();
     
-    // get the ref 
+    // get the ref. will abort the program is its invalid
     MyData &val = handle.ref();
     
-    // do checked execution 
+    // executes the functor if the handle is valid when the function is called. this is fancy but impractical
      handle.checked_execution([](MyData *ptr) { ptr->a = 0; });
-  }
 ```
 
+## Creating allocators
 
-
+I have created an allocator which is the `simple_allocator` as an example. Handles present a problem which is you end up (eventually or possibly not within the lifespan of the computer if you do it right) zombie references. These are old references that point to memory that is now being reused. You can get around this by being smart about allocations. You can even have an allocator that could do reference counting if so desire. The beauty of handles is you can switch out the allocator and it doesn't change the usage of your handles. This is why smart pointers are a bad strategy. Handles shift you back to thinking about allocations (which is what people should have been thinking about at the beginning)
 
