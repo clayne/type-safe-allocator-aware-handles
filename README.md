@@ -65,7 +65,7 @@ You must then set the static allocator pointer for this handle to a valid `MyDat
 ```
 We can get the value a handle refers to in 3 ways. 
 
-```
+```cpp
     // allocate a value and get the handle 
     nstd::handle<MyData, MyDataAllocator> handle = nstd::handle<MyData, MyDataAllocator>::allocator->allocate();
     
@@ -79,7 +79,16 @@ We can get the value a handle refers to in 3 ways.
      handle.checked_execution([](MyData *ptr) { ptr->a = 0; });
 ```
 
+We get type safety because every handle is a different type. So we don't end up making this mistake: 
+
+```cpp
+  nstd::handle<int, simple_allocator<int, 100>>       a = 1;
+  nstd::handle<double, simple_allocator<double, 100>> b = handle; // compile error 
+```
+
+Do we really need this repo? Not really, but the plan is to win smart pointer people over so that they eventually write nice stuff. This is supposed to help them.
+
 ## Creating allocators
 
-I have created an allocator which is the `simple_allocator` as an example. Handles present a problem which is you end up (eventually or possibly not within the lifespan of the computer if you do it right) zombie references. These are old references that point to memory that is now being reused. You can get around this by being smart about allocations. You can even have an allocator that could do reference counting if so desire. The beauty of handles is you can switch out the allocator and it doesn't change the usage of your handles. This is why smart pointers are a bad strategy. Handles shift you back to thinking about allocations (which is what people should have been thinking about at the beginning)
+Handles present a problem which is you end up (eventually or possibly not within the lifespan of the computer if you do it right) zombie references. These are old references that point to memory that is now being reused. You can get around this by being smart about allocations and writing good allocators. You can have an allocator that could do reference counting if so desire or you can make allocators thread safe. The beauty of handles is you can switch out the allocator and it doesn't change the usage of your handles. This is why smart pointers are a bad strategy. Handles shift you back to thinking about allocations (which is what people should have been thinking about at the beginning)
 
