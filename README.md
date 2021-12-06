@@ -17,11 +17,28 @@ top of that they are really slow. C++ with std::shared_ptr is bad, bad, bad!
 
 This repo doesn't solve all the problems that smart pointers solve. It's just a different way to handle memory and a different way of thinking of things. 
 It moves responsibilities away from smart pointers and places them with the allocators (where 
-they should have been from the start). Allocators give you a type safe handle and with that handle you can copy it to your hearts content without wo
+they should have been from the start). Allocators give you a type safe handle and with that you can access the data to your hearts content.
 
 The big problem with handles is "zombie references". Handles that have a stale value. There are strategies to mitigate this, but it does mean that eventually the program will not be 
 able to allocate any more handles (this could be by the time the universe ends though).
 
-So with handles dead references should be minimsied as much as possible. You get a similar problem with smart pointers where forgotten smart pointer will 
-keep an object alive when it shouldn't. You could make a custom allocator that does a sweep and clear
+So with handles, dead references should be minimised as much as possible by your design. You get a similar problem with smart pointers where forgotten smart pointer will 
+keep an object alive when it shouldn't. The only way to properly solve this is to make a custom allocator that does a sweep and clear
+
+## Example 
+
+Handles are templated and require you to specify the type they point to and the type of the allocator the data belongs to. In order to use 
+the handles, the allocator class must have implemented the T* handle_deref(nstd::handle<T, F> &handle) function (where T is the type of the data and F is the type of the allocator (the class this function should belong to))
+
+The handle deref function is exactly what it describes. It dererferences the handle. It returns the pointer the handle refers to. It's up to you how you implement this, but not that all handles are fundamental types, they are simple integral types in some way or another and can't be anything else.
+
+You must also assign the static allocator pointer for you specific handle type. 
+
+Lets say you have a handle to you type 'struct MyData'. The handle for this could be nstd::handle<MyData, MyDataAllocator>'. Where 'MyDataAllocator' is your custom allocator type.
+You must then set the static allocator pointer for this handle to a 'MyDataAllocator' object.
+
+'nstd::handle<MyData, MyDataAllocator>::allocator = new MyDataAllocator()'.
+
+
+
 
