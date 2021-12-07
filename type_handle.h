@@ -15,9 +15,9 @@ namespace nstd { // non-standard library
             friend Allocator;
             static Allocator *allocator;
 
-        handle() = delete;
+        handle() {}
 
-        inline handle(HandleType handle_in) : id(handle_in) { };
+        inline handle(HandleType handle_in) : id(handle_in) {};
 
         inline T* ptr() {
             return allocator->handle_deref(*this);
@@ -50,23 +50,23 @@ namespace nstd { // non-standard library
     struct simple_allocator {
 
         T data[capacity];
-        uint32_t slot[capacity];
+        bool slot[capacity];
         uint32_t counter = 1;
 
         simple_allocator() {
             for (uint64_t i = 0; i < capacity; i++) {
-                slot[i] = 0;
+                slot[i] = false;
             }
         }
 
         nstd::handle<T, simple_allocator> allocate() {
             
             for (uint32_t i = 0; i < capacity; i++) {
-                if (slot[i] == 0) {
+                if (slot[i] == false) {
 
                     uint64_t handle = (uint64_t)i << 32;
                     handle |= (uint64_t)counter;
-                    slot[i] = 1;
+                    slot[i] = true;
 
                     counter++;      
                     if (counter == 0) counter++; // it wrapped around, uh oh
@@ -78,10 +78,14 @@ namespace nstd { // non-standard library
             return 0; // 0 is an invalid handle
         }
 
-        void deallocate(nstd::handle<T, simple_allocator> handle) {
+        void deallocate(nstd::handle<T, simple_allocator> &handle) {
+            if (handle.id == 0) return;
             uint32_t index = handle.id >> 32;
-            if (index >= capacity) return;
-            slot[index] = 0;
+            if (index >= capacity) {
+                handle.id = 0;
+                return;
+            }
+            slot[index] = false;
         }
 
         T* handle_deref(nstd::handle<T, simple_allocator> &handle) {
@@ -93,7 +97,7 @@ namespace nstd { // non-standard library
                 handle.id = 0;
                 return nullptr;
             }
-            if (slot[index] == 0) {
+            if (slot[index] == false) {
                 handle.id = 0;
                 return nullptr;
             }
