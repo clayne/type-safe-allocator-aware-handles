@@ -9,7 +9,7 @@ struct MyData {
 
 int main() {
 
-    typedef simple_allocator nstd::simple_allocator<MyData, 1000>;
+    typedef nstd::simple_allocator<MyData, 1000> simple_allocator;
 
     // Create our allocator for this type handle type
     nstd::handle<MyData, simple_allocator>::allocator = new simple_allocator();
