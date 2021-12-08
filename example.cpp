@@ -1,55 +1,69 @@
 #include "type_handle.h"
-#include <new>
 
-struct MyData {
+#include <stdio.h>
+#include <vector>
+#include <set>
+
+struct MyClass {
     int a;
-    double b;
-    const char* c = "hello";
+    MyClass(int a_in) {
+        a = a_in;
+    }
 };
 
 int main() {
 
-    typedef nstd::simple_allocator<MyData, 1000> simple_allocator;
+    typedef nstd::simple_allocator<std::vector<int>, 10>   AllocatorVec;
+    typedef nstd::handle<std::vector<int>, AllocatorVec> HandleVec;
 
-    // Create our allocator for this type handle type
-    nstd::handle<MyData, simple_allocator>::allocator = new simple_allocator();
+    typedef nstd::simple_allocator<std::set<HandleVec>, 5>  AllocatorSet;
+    typedef nstd::handle<std::set<HandleVec>, AllocatorSet> HandleSet;
 
-    // Allocate a handle to some data. The handle specifies the type it points to and the allocator responsible 
-    // for the data.
-    typedef nstd::handle<MyData, simple_allocator> HandleMyData;
+    typedef nstd::simple_allocator<MyClass, 4> AllocatorMyClass;
+    typedef nstd::handle<MyClass, AllocatorMyClass> HandleMyClass;
 
-    // typedefs are useful to get away from angle bracket madness
-    HandleMyData handle = HandleMyData::allocator->allocate();
+    // Create a set of allocators for different types.
+    // The simple allocator will allow this.
+    AllocatorVec allocatorVec;
+    AllocatorSet allocatorSet;
+    AllocatorMyClass allocatorMyClass;
 
-    // get can get data with ptr() 
-    MyData *ptr_my_data = handle.ptr();
-    // check if its null 
-    if (ptr_my_data == nullptr) {
-        printf("this shouldn't be null since we just allocated it!");
-        delete HandleMyData::allocator;
-        return 1;
+    // Allocate with the constructor
+    HandleMyClass hMyClass = HandleMyClass::allocator->allocate(10);
+
+    HandleVec hVec1 = HandleVec::allocator->allocate();
+    HandleVec hVec2 = HandleVec::allocator->allocate();
+    HandleSet hSet = HandleSet::allocator->allocate();
+
+    // Can access the pointer of the hVec1
+    std::vector<int>* ptr = hVec1.ptr();
+    if (ptr != nullptr) {
+        ptr->push_back(1);
     }
+    // Can access via reference. This will abort if the reference is invalid
+    hVec1.ref().push_back(10);
 
-    // deallocate the handle 
-    HandleMyData::allocator->deallocate(handle);
-    ptr_my_data = handle.ptr();
-    if (ptr_my_data == nullptr) {
-        printf("this should be null since we deallocated it!");
-    }
+    // Can compose references inside other objects
+    hSet.ref().insert(hVec1);   
 
-    // use ref() to get a reference. This will call abort() if its an invalid handle 
-    handle = HandleMyData::allocator->allocate();
-    MyData& my_data = handle.ref();
-
-    // or we can access it via checked execution.
-    // this will check if valid and then execute the functor
-    // if its not valid nothing will happen
-    handle.checked_execution([](MyData *ptr){ ptr->a = 10; });
-    handle.checked_execution([](MyData *ptr){
-        // pointer is guaranteed to be valid (by your allocator)
-        // at this point
-        ptr->a = 10;
+    // Can encapuslate "unsafe" dereferences.
+    // Checked execution executes code if the pointer is valid
+    hSet.checked_execution([&hVec2](std::set<HandleVec> *setPtr) {
+        setPtr->insert(hVec2);
     });
 
-    delete HandleMyData::allocator;
+    // handles are just integers so we can do comparisons
+    if (hVec1 == hVec2) {
+       
+    }
+    else if (hVec1 != hVec2) {
+
+    }
+    else if (hVec1 <= hVec2) {
+
+    }
+
+    // But because the handles are type safe its impossible to assign
+    // one handle to the other
+    // hSet == hVec1; // <--- compile error 
 }
